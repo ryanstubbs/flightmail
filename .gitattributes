@@ -1,0 +1,15 @@
+# Line endings
+* text=auto eol=lf
+
+# Dev environment & tooling — never ship in dist archives
+/.ddev/ export-ignore
+/.github/ export-ignore
+/.phpunit.cache/ export-ignore
+/tests/ export-ignore
+
+# Config only needed for development
+/.gitignore export-ignore
+/.gitattributes export-ignore
+/composer.lock export-ignore
+/phpunit.xml.dist export-ignore
+/phpstan.neon.dist export-ignore

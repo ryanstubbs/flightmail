@@ -1,0 +1,66 @@
+{
+  "name": "ryanstubbs/flightmail",
+  "description": "Flight PHP mail plugin wrapping Symfony Mailer. Multi-provider DSN support, Twig & Latte template rendering, fully extensible.",
+  "version": "1.0.0",
+  "type": "library",
+  "keywords": [
+    "flight",
+    "flightphp",
+    "mailer",
+    "mail",
+    "symfony",
+    "email",
+    "twig",
+    "latte",
+    "plugin"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Ryan Stubbs",
+      "homepage": "https://ryanstubbs.co.uk"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "flightphp/core": "^3.15",
+    "symfony/event-dispatcher": "^6.4 || ^7.2 || ^8.0",
+    "symfony/http-client-contracts": "^3.2",
+    "symfony/mailer": "^7.2 || ^8.0",
+    "symfony/mime": "^7.2 || ^8.0"
+  },
+  "require-dev": {
+    "latte/latte": "^3.0",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpunit/phpunit": "^13.3.1",
+    "twig/twig": "^3.20"
+  },
+  "suggest": {
+    "twig/twig": "^3.0 — render message bodies with Twig",
+    "latte/latte": "^3.0 — render message bodies with Latte",
+    "symfony/amazon-mailer": "Amazon SES DSN support (ses+https://)",
+    "symfony/brevo-mailer": "Brevo DSN support (brevo+api://)",
+    "symfony/mailgun-mailer": "Mailgun DSN support (mailgun+api://, mailgun+https://)",
+    "symfony/mailersend-mailer": "MailerSend DSN support (mailersend+api://)",
+    "symfony/postmark-mailer": "Postmark DSN support (postmark+api://)",
+    "symfony/sendgrid-mailer": "Sendgrid DSN support (sendgrid+api://)"
+  },
+  "autoload": {
+    "psr-4": {
+      "ryanstubbs\\FlightMail\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ryanstubbs\\FlightMail\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse --memory-limit=512M"
+  }
+}
