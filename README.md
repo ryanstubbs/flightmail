@@ -1,6 +1,6 @@
 # FlightMail
 
-[![CI](https://github.com/ryanstubbs/flightmail/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanstubbs/flightmail/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](composer.json)
+[![CI](https://github.com/ryanstubbs/flightmail/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanstubbs/flightmail/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](composer.json) ![Packagist Version](https://img.shields.io/packagist/v/ryanstubbs/flightmail) ![Packagist Downloads](https://img.shields.io/packagist/dt/ryanstubbs/flightmail)
 
 Send email from your [Flight PHP](https://flightphp.com) app without the headaches.
 
