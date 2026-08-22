@@ -20,6 +20,8 @@ use Closure;
  *         'renderer' => 'twig',
  *         'templates' => ['paths' => [__DIR__ . '/mail-templates']],
  *         'from' => 'no-reply@example.com',
+ *         'inline_css' => true,          // inline <style> blocks (needs pelago/emogrifier)
+ *         'text_from_html' => 'markdown' // auto text part from HTML (needs league/html-to-markdown)
  *     ]);
  *
  * Then anywhere in your app:
@@ -110,6 +112,8 @@ final class MailPlugin
                 $this->config['renderer'] ?? 'twig',
                 $this->config['from'] ?? null,
                 $this->config['default_transport'] ?? null,
+                $this->config['inline_css'] ?? false,
+                $this->config['text_from_html'] ?? false,
             );
 
             foreach ($this->config['hooks'] ?? [] as $hook) {

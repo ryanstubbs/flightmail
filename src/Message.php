@@ -2,10 +2,12 @@
 
 namespace ryanstubbs\FlightMail;
 
+use ryanstubbs\FlightMail\Transform\HtmlToText;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Header\HeaderInterface;
 use Symfony\Component\Mime\Email;
+use InvalidArgumentException;
 use LogicException;
 
 /**
@@ -31,6 +33,16 @@ final class Message extends Email
      * @var array<string,mixed>
      */
     private array $textTemplateParams = [];
+
+    private ?bool $inlineCssOverride = null;
+
+    /**
+     * true = follow the mailer-wide format, "plain"/"markdown" force one,
+     * false = never generate, null = follow global configuration.
+     *
+     * @var bool|string|null
+     */
+    private $textFromHtmlOverride = null;
 
     /**
      * Render this template into the HTML body (alias of htmlTemplate()).
@@ -66,6 +78,76 @@ final class Message extends Email
         $this->textTemplateParams = $params;
 
         return $this;
+    }
+
+    /**
+     * Force CSS inlining on or off for this message, overriding the mailer's
+     * "inline_css" setting.
+     */
+    public function inlineCss(bool $enabled = true): static
+    {
+        $this->inlineCssOverride = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Never inline CSS into this message.
+     */
+    public function withoutInlineCss(): static
+    {
+        return $this->inlineCss(false);
+    }
+
+    /**
+     * Generate this message's text part from its HTML body at send time,
+     * overriding the mailer's "text_from_html" setting. Pass true to follow
+     * the configured format, "auto" / "plain" / "markdown" to force one, or
+     * false to disable generation for this message.
+     *
+     * @param bool|string $mode true, false, "auto", "plain" or "markdown"
+     */
+    public function textFromHtml(bool|string $mode = true): static
+    {
+        if (
+            is_string($mode) === true &&
+            in_array($mode, ['auto', HtmlToText::PLAIN, HtmlToText::MARKDOWN], true) === false
+        ) {
+            throw new InvalidArgumentException(sprintf(
+                'textFromHtml expects true, false, "auto", "%s" or "%s" (got "%s").',
+                HtmlToText::PLAIN,
+                HtmlToText::MARKDOWN,
+                $mode,
+            ));
+        }
+
+        $this->textFromHtmlOverride = $mode;
+
+        return $this;
+    }
+
+    /**
+     * Never generate a text part from HTML for this message.
+     */
+    public function withoutTextFromHtml(): static
+    {
+        return $this->textFromHtml(false);
+    }
+
+    /**
+     * @internal read by the Mailer when applying body enhancements
+     */
+    public function getInlineCssOverride(): ?bool
+    {
+        return $this->inlineCssOverride;
+    }
+
+    /**
+     * @internal read by the Mailer when applying body enhancements
+     */
+    public function getTextFromHtmlOverride(): bool|string|null
+    {
+        return $this->textFromHtmlOverride;
     }
 
     /**

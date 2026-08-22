@@ -31,6 +31,8 @@
   },
   "require-dev": {
     "latte/latte": "^3.0",
+    "league/html-to-markdown": "^5.1",
+    "pelago/emogrifier": "^8.0",
     "phpstan/phpstan": "^2.1",
     "phpstan/phpstan-phpunit": "^2.0",
     "phpunit/phpunit": "^11.5 || ^12.0 || ^13.0",
@@ -39,6 +41,8 @@
   "suggest": {
     "twig/twig": "^3.0 — render message bodies with Twig",
     "latte/latte": "^3.0 — render message bodies with Latte",
+    "pelago/emogrifier": "^8.0 — inline CSS into HTML emails (enable with the \"inline_css\" option)",
+    "league/html-to-markdown": "^5.1 — Markdown text parts generated from HTML bodies (\"text_from_html\")",
     "symfony/amazon-mailer": "Amazon SES DSN support (ses+https://)",
     "symfony/brevo-mailer": "Brevo DSN support (brevo+api://)",
     "symfony/mailgun-mailer": "Mailgun DSN support (mailgun+api://, mailgun+https://)",

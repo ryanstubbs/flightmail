@@ -19,6 +19,8 @@ Flight::mail()->compose()
 - **Any provider, one line each.** SMTP, Postmark, Sendgrid, Mailgun, Amazon SES, Brevo and friends all work through simple DSN strings.
 - **Use several providers at once.** Transactional mail through Postmark, newsletters through your own SMTP - pick per message.
 - **Templates if you want them.** Render bodies with Twig or Latte. Don't want templates? Just pass strings and install nothing extra.
+- **Email-safe styling, optionally automatic.** Inline CSS into your HTML so Gmail doesn't strip it - one Composer package away.
+- **Both parts, half the work.** Let FlightMail generate the plain-text part from your HTML (Markdown quality), instead of writing it twice.
 - **Boring in the best way.** Lazy connections, clear errors instead of silently swallowed mail, and everything is swappable if you need something custom.
 
 ---
@@ -37,14 +39,16 @@ Flight::mail()->compose()
 composer require ryanstubbs/flightmail
 ```
 
-That's it for sending plain-text and HTML emails. Template rendering is opt-in - add an engine only if you'll use it:
+That's it for sending plain-text and HTML emails. Everything else is opt-in - add an engine only if you'll use it:
 
 ```bash
-composer require twig/twig      # for .twig templates
-composer require latte/latte    # for .latte templates
+composer require twig/twig                 # for .twig templates
+composer require latte/latte               # for .latte templates
+composer require pelago/emogrifier         # for CSS inlining ("inline_css")
+composer require league/html-to-markdown   # for Markdown text parts ("text_from_html")
 ```
 
-Both can be installed side by side; FlightMail picks the right one based on the file extension.
+All of these can be installed side by side; FlightMail picks the right one based on what you configure.
 
 ## Your first email
 
@@ -153,6 +157,80 @@ A few things worth knowing about templates:
 - The engine is chosen by extension: `.twig` → Twig, `.latte` → Latte, anything else → your configured default (`renderer` option).
 - An explicit `->html()` or `->text()` body always wins over a template, so you can set a default template and override it per message.
 
+## Styling HTML and generating text parts
+
+Two optional send-time enhancements, both off by default and both powered by libraries you only install if you want them:
+
+| Feature            | Install                    | Config key      |
+| ------------------ | -------------------------- | --------------- |
+| CSS inlining       | `pelago/emogrifier`        | `inline_css`    |
+| Text part from HTML| `league/html-to-markdown`  | `text_from_html`|
+
+### Inline CSS into your HTML email
+
+Gmail and most webmail clients strip `<style>` blocks - inline `style=""` attributes are the only styling they reliably honor. Writing those by hand is miserable; let [Emogrifier](https://github.com/MyIntervals/emogrifier) do it at send time:
+
+```bash
+composer require pelago/emogrifier
+```
+
+```php
+MailPlugin::install([
+    'dsns' => ['default' => 'smtp://user:pass@localhost:1025'],
+    'inline_css' => true,
+]);
+```
+
+With that on, every HTML body gets its CSS inlined just before sending - whether it came from a template or `->html()`. A message like `<style>p { color: red; }</style><p>Hi</p>` goes out as `<p style="color: red;">Hi</p>`.
+
+To also inject shared styles into every email (brand colors, resets) without repeating them in each template, pass rules directly or point at a stylesheet file:
+
+```php
+'inline_css' => ['css_file' => __DIR__ . '/mail-styles/base.css'],
+// or
+'inline_css' => ['css' => '.button { background: #0a84ff; color: #fff; }'],
+```
+
+Full documents keep their structure; fragments stay fragments. Per-message control:
+
+```php
+$message->inlineCss();          // force inlining for this one message
+$message->withoutInlineCss();   // skip it even when globally enabled
+```
+
+### Generate the text part from your HTML
+
+Best practice is to send an HTML and a plain-text version together, but writing both is tedious. FlightMail can derive the text part from the final HTML automatically - no extra dependency required for basic conversion, since the converter ships with Symfony Mime:
+
+```php
+MailPlugin::install([
+    'dsns' => ['default' => 'smtp://user:pass@localhost:1025'],
+    'text_from_html' => true,       // Markdown when possible, plain otherwise
+]);
+```
+
+Modes:
+
+- `true` or `'auto'` - Markdown output if `league/html-to-markdown` is installed, otherwise simple tag-stripping.
+- `'markdown'` - force Markdown (requires `composer require league/html-to-markdown`, headings become `==`, links `[text](url)`, bold `**bold**`).
+- `'plain'` - always strip tags; works with zero extra packages.
+
+Generation runs after rendering and CSS inlining, and only when the message has an HTML body but no text body - an explicit `->text()` or `->textTemplate()` always wins. Per-message control mirrors inlining:
+
+```php
+Flight::mail()->compose()
+    ->to('someone@example.com')
+    ->subject('Welcome!')
+    ->template('welcome.html.twig', ['name' => 'Ryan'])
+    ->send();                                   // text part generated for you
+
+// ...and per-message overrides:
+$message->textFromHtml('plain');                // force tag-stripping for this one
+$message->withoutTextFromHtml();                // HTML-only email
+```
+
+If you enable a mode whose library isn't installed, you get a clear error telling you exactly which `composer require` to run - never silent degradation.
+
 ## Choosing a provider
 
 Providers plug in through DSN strings. Install the bridge package, paste the DSN into `dsns`, done.
@@ -228,6 +306,16 @@ MailPlugin::install([
 
     // Tweak the Latte engine at boot: fn(Latte\Engine $engine): void.
     'latte' => ['setup' => static fn (Latte\Engine $e) => $e->addExtension(new MyExtension())],
+
+    // Inline CSS into HTML bodies at send time (needs pelago/emogrifier).
+    // true processes each message's <style> blocks; an array can add shared CSS.
+    'inline_css' => true,
+    // 'inline_css' => ['css' => '.button { ... }', 'css_file' => __DIR__ . '/base.css'],
+
+    // Generate the text part from the HTML body when none is set:
+    // true / 'auto' = Markdown if league/html-to-markdown is installed, else plain;
+    // 'markdown' or 'plain' forces a format; false (default) disables.
+    'text_from_html' => true,
 
     // Custom DSN schemes, custom renderers, pre-send hooks (see below).
     'transport_factories' => [],
@@ -344,7 +432,10 @@ $message->template($name, $params)           // HTML body from a template
 $message->htmlTemplate($name, $params)       // alias of template()
 $message->textTemplate($name, $params)       // text body from a template
 $message->transport($name)                   // route via a named DSN
-$message->send(): ?SentMessage               // render + send
+$message->inlineCss() / ->withoutInlineCss() // force on / off per message
+$message->textFromHtml('plain')              // force a text format per message
+$message->withoutTextFromHtml()              // HTML-only email
+$message->send(): ?SentMessage               // render + enhance + send
 
 // On the mailer itself
 $mailer->send($message): ?SentMessage        // explicit alternative to $message->send()
@@ -366,6 +457,12 @@ You used a template whose engine isn't installed. Fix with `composer require twi
 
 **"Unknown mail transport ..."**
 A `->transport('name')` (or `default_transport`) doesn't match any key in `dsns`. Check spelling - the error lists the configured names.
+
+**"CSS inlining requires pelago/emogrifier"**
+You enabled `inline_css` (or called `->inlineCss()`) without installing the library. Fix with `composer require pelago/emogrifier`.
+
+**"Markdown text parts require league/html-to-markdown"**
+You forced `text_from_html` to `'markdown'` (or `->textFromHtml('markdown')`) without the library installed. Fix with `composer require league/html-to-markdown`, or use `true`/`'auto'`/`'plain'`, which degrade gracefully.
 
 **Mail isn't arriving**
 Point `dsns` at `null://null` to confirm the rest of your code works, then switch back to the real DSN. In DDEV, use `smtp://127.0.0.1:1025` and inspect messages in Mailpit at port 8025.

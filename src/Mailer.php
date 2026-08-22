@@ -4,10 +4,13 @@ namespace ryanstubbs\FlightMail;
 
 use ryanstubbs\FlightMail\Render\RendererFactory;
 use ryanstubbs\FlightMail\Render\RendererInterface;
+use ryanstubbs\FlightMail\Transform\HtmlToText;
+use ryanstubbs\FlightMail\Transform\StyleInliner;
 use ryanstubbs\FlightMail\Transport\TransportManager;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
+use InvalidArgumentException;
 
 /**
  * The main entry point for sending mail. Wraps Symfony Mailer transports and adds:
@@ -19,6 +22,11 @@ use Symfony\Component\Mime\Address;
 final class Mailer
 {
     /**
+     * Resolved global text generation mode: 'plain', 'markdown' or null (off).
+     */
+    private ?string $textFromHtmlMode = null;
+
+    /**
      * @var list<callable(Message): void>
      */
     private array $hooks = [];
@@ -29,6 +37,8 @@ final class Mailer
      * @param TransportManager                   $transports
      * @param RendererFactory                    $renderers
      * @param Address|string|array<int|string,string>|null $defaultFrom
+     * @param array{css?:string,css_file?:string}|bool     $inlineCss   see StyleInliner
+     * @param string|bool                        $textFromHtml 'plain', 'markdown' (or true = auto-detect), false to disable
      */
     public function __construct(
         private readonly TransportManager $transports,
@@ -36,8 +46,24 @@ final class Mailer
         private readonly string $defaultRenderer = 'twig',
         Address|string|array|null $defaultFrom = null,
         private readonly ?string $defaultTransport = null,
+        private readonly bool|array $inlineCss = false,
+        private readonly bool|string $textFromHtml = false,
     ) {
         $this->defaultFrom = self::normalizeAddress($defaultFrom);
+
+        if (
+            is_string($textFromHtml) === true &&
+            in_array($textFromHtml, ['auto', HtmlToText::PLAIN, HtmlToText::MARKDOWN], true) === false
+        ) {
+            throw new InvalidArgumentException(sprintf(
+                'Unknown "text_from_html" mode "%s" - expected true, false, "auto", "%s" or "%s".',
+                $textFromHtml,
+                HtmlToText::PLAIN,
+                HtmlToText::MARKDOWN,
+            ));
+        }
+
+        $this->textFromHtmlMode = is_string($textFromHtml) === true ? $textFromHtml : ($textFromHtml === true ? HtmlToText::MARKDOWN : null);
     }
 
     /**
@@ -84,11 +110,15 @@ final class Mailer
     }
 
     /**
+     * Render templates, then apply body enhancements (CSS inlining and
+     * automatic text-part generation) and global defaults.
+     *
      * @throws \Symfony\Component\Mailer\Exception\TransportExceptionInterface
      */
     public function send(Message $message, ?Envelope $envelope = null): ?SentMessage
     {
         $this->renderTemplates($message);
+        $this->enhanceBody($message);
         $this->applyDefaults($message);
 
         foreach ($this->hooks as $hook) {
@@ -109,6 +139,57 @@ final class Mailer
         if ($textTemplate !== null && self::isEmptyBody($message->getTextBody()) === true) {
             $message->text($this->render($textTemplate, $message->getTextTemplateParams()));
         }
+    }
+
+    private function enhanceBody(Message $message): void
+    {
+        if ($this->shouldInline($message) === true) {
+            $message->html((new StyleInliner($this->inlineCss))->inline((string) $message->getHtmlBody()));
+        }
+
+        $mode = $this->textModeFor($message);
+        if (
+            $mode !== null &&
+            self::isEmptyBody($message->getTextBody()) === true &&
+            self::isEmptyBody($message->getHtmlBody()) === false
+        ) {
+            $converter = $mode === HtmlToText::MARKDOWN || ($mode === 'auto' && HtmlToText::markdownAvailable() === true)
+                ? new HtmlToText(HtmlToText::MARKDOWN)
+                : new HtmlToText(HtmlToText::PLAIN);
+
+            $charset = $message->getHtmlCharset() ?? 'utf-8';
+            $message->text($converter->convert((string) $message->getHtmlBody(), $charset));
+        }
+    }
+
+    /**
+     * Global config decides, unless the message overrides it.
+     */
+    private function shouldInline(Message $message): bool
+    {
+        return $message->getInlineCssOverride()
+            ?? ($this->inlineCss !== false && self::isEmptyBody($message->getHtmlBody()) === false);
+    }
+
+    /**
+     * Returns the text generation mode for this message or null to skip:
+     * 'plain', 'markdown', or 'auto' (markdown when available, else plain).
+     */
+    private function textModeFor(Message $message): ?string
+    {
+        $override = $message->getTextFromHtmlOverride();
+
+        if ($override === false) {
+            return null;
+        }
+
+        $mode = match (true) {
+            is_string($override) => $override,
+            $override === true => $this->textFromHtmlMode ?? 'auto',
+            default => $this->textFromHtmlMode,
+        };
+
+        return in_array($mode, [HtmlToText::PLAIN, HtmlToText::MARKDOWN, 'auto'], true) === true ? $mode : null;
     }
 
     private function applyDefaults(Message $message): void
