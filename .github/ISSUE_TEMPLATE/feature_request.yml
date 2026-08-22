@@ -1,0 +1,63 @@
+name: Feature Request
+description: Suggest an idea or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Describe the problem you're trying to solve — that matters more than the specific solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What are you trying to accomplish, and what's blocking you today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: What would you like to happen? Include rough API/CLI shape if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches, tools, or workarounds you've tried or ruled out.
+
+  - type: dropdown
+    id: importance
+    attributes:
+      label: Importance
+      description: How much does this matter to your workflow?
+      options:
+        - Blocking - cannot use flightmail without it
+        - Important - significant friction without it
+        - Nice to have - quality of life improvement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Willingness to Contribute
+      options:
+        - Yes, I could submit a PR for this
+        - Yes, with guidance from maintainers
+        - No, just suggesting
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I searched existing issues and discussions for this idea
+          required: true
+        - label: This fits the scope of flightmail
