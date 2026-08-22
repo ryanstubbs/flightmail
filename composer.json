@@ -1,7 +1,7 @@
 {
   "name": "ryanstubbs/flightmail",
   "description": "Flight PHP mail plugin wrapping Symfony Mailer. Multi-provider DSN support, Twig & Latte template rendering, fully extensible.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "library",
   "keywords": [
     "flight",
