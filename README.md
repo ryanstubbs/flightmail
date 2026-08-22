@@ -161,10 +161,10 @@ A few things worth knowing about templates:
 
 Two optional send-time enhancements, both off by default and both powered by libraries you only install if you want them:
 
-| Feature            | Install                    | Config key      |
-| ------------------ | -------------------------- | --------------- |
-| CSS inlining       | `pelago/emogrifier`        | `inline_css`    |
-| Text part from HTML| `league/html-to-markdown`  | `text_from_html`|
+| Feature             | Install                   | Config key       |
+| ------------------- | ------------------------- | ---------------- |
+| CSS inlining        | `pelago/emogrifier`       | `inline_css`     |
+| Text part from HTML | `league/html-to-markdown` | `text_from_html` |
 
 ### Inline CSS into your HTML email
 
@@ -396,23 +396,6 @@ Hand over a Symfony event dispatcher and/or PSR-3 logger and every transport wil
 ```php
 $plugin->eventDispatcher($dispatcher); // receives MessageEvent before each send
 $plugin->logger($logger);              // transport-level logs
-```
-
-## Using FlightMail outside Flight
-
-The core has no framework coupling - instantiate it anywhere:
-
-```php
-use ryanstubbs\FlightMail\Mailer;
-use ryanstubbs\FlightMail\Render\RendererFactory;
-use ryanstubbs\FlightMail\Transport\TransportManager;
-
-$mailer = new Mailer(
-    new TransportManager(['default' => 'smtp://127.0.0.1:1025']),
-    new RendererFactory(['templates' => ['paths' => [__DIR__ . '/templates']]]),
-);
-
-$mailer->compose()->to('...')->template('welcome.latte', ['name' => 'Ryan'])->send();
 ```
 
 ## API cheat sheet
